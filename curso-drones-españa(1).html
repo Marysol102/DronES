@@ -1,0 +1,895 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>DroneAcademy ES — Curso Pilotaje 2026</title>
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;600;700;900&family=Exo+2:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{--bg:#050a14;--surface:#0d1a2e;--surface2:#122035;--accent:#00d4ff;--accent2:#ff6b35;--gold:#ffd700;--green:#00ff88;--red:#ff4444;--text:#e8f4fd;--muted:#6b8fa8;--border:rgba(0,212,255,0.15);--glow:0 0 20px rgba(0,212,255,0.3)}
+  *{margin:0;padding:0;box-sizing:border-box}
+  body{font-family:'Exo 2',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;overflow-x:hidden}
+  body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellipse at 20% 20%,rgba(0,212,255,0.05) 0%,transparent 50%),radial-gradient(ellipse at 80% 80%,rgba(255,107,53,0.05) 0%,transparent 50%);pointer-events:none;z-index:0}
+  body::after{content:'';position:fixed;inset:0;background-image:linear-gradient(rgba(0,212,255,0.03) 1px,transparent 1px),linear-gradient(90deg,rgba(0,212,255,0.03) 1px,transparent 1px);background-size:40px 40px;pointer-events:none;z-index:0}
+  .app{position:relative;z-index:1}
+  header{display:flex;align-items:center;justify-content:space-between;padding:16px 24px;background:rgba(13,26,46,0.95);backdrop-filter:blur(10px);border-bottom:1px solid var(--border);position:sticky;top:0;z-index:100}
+  .logo{font-family:'Orbitron',monospace;font-size:1.1rem;font-weight:900;color:var(--accent);text-shadow:var(--glow);letter-spacing:2px}
+  .logo span{color:var(--accent2)}
+  .header-stats{display:flex;gap:16px;align-items:center}
+  .stat-chip{display:flex;align-items:center;gap:6px;background:var(--surface2);border:1px solid var(--border);border-radius:20px;padding:5px 14px;font-size:0.8rem;font-weight:600}
+  .stat-chip.xp{color:var(--gold);border-color:rgba(255,215,0,0.3)}
+  .stat-chip.lives{color:var(--red);border-color:rgba(255,68,68,0.3)}
+  .stat-chip.streak{color:var(--accent2);border-color:rgba(255,107,53,0.3)}
+  .main{max-width:900px;margin:0 auto;padding:20px 16px 80px}
+  .screen{display:none}
+  .screen.active{display:block;animation:fadeIn 0.4s ease}
+  @keyframes fadeIn{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+  @keyframes floatDrone{0%,100%{transform:translateY(0)}50%{transform:translateY(-10px)}}
+  .hero{text-align:center;padding:40px 0 32px}
+  .drone-icon{font-size:4rem;display:block;margin-bottom:16px;animation:floatDrone 3s ease-in-out infinite}
+  .hero h1{font-family:'Orbitron',monospace;font-size:2rem;font-weight:900;color:var(--accent);text-shadow:var(--glow);letter-spacing:3px;margin-bottom:8px}
+  .hero p{color:var(--muted);font-size:0.95rem;max-width:500px;margin:0 auto 8px}
+  .badge-row{display:flex;justify-content:center;gap:8px;flex-wrap:wrap;margin:16px 0}
+  .badge{background:var(--surface2);border:1px solid var(--border);border-radius:20px;padding:4px 12px;font-size:0.75rem;color:var(--accent);font-weight:600}
+  .progress-section{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:20px;margin-bottom:24px}
+  .progress-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px}
+  .progress-title{font-family:'Orbitron',monospace;font-size:0.85rem;color:var(--accent);letter-spacing:1px}
+  .progress-pct{font-size:0.85rem;color:var(--gold);font-weight:600}
+  .progress-bar{height:8px;background:var(--surface2);border-radius:4px;overflow:hidden}
+  .progress-fill{height:100%;background:linear-gradient(90deg,var(--accent),var(--green));border-radius:4px;transition:width 0.6s ease;box-shadow:0 0 10px rgba(0,212,255,0.5)}
+  .section-label{font-family:'Orbitron',monospace;font-size:0.7rem;color:var(--muted);letter-spacing:2px;text-transform:uppercase;margin-bottom:12px}
+  .modules-grid{display:flex;flex-direction:column;gap:10px}
+  .module-card{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:16px 20px;cursor:pointer;transition:all 0.25s ease;display:flex;align-items:center;gap:16px;position:relative;overflow:hidden}
+  .module-card::before{content:'';position:absolute;left:0;top:0;bottom:0;width:3px;background:var(--accent);transform:scaleY(0);transition:transform 0.25s}
+  .module-card:hover::before{transform:scaleY(1)}
+  .module-card:hover{border-color:rgba(0,212,255,0.4);background:var(--surface2);transform:translateX(4px)}
+  .module-card.locked{opacity:0.45;cursor:not-allowed}
+  .module-card.locked:hover{transform:none;border-color:var(--border)}
+  .module-card.completed{border-color:rgba(0,255,136,0.3)}
+  .module-card.completed::before{background:var(--green);transform:scaleY(1)}
+  .mod-icon{font-size:1.8rem;min-width:44px;text-align:center}
+  .mod-info{flex:1}
+  .mod-name{font-weight:600;font-size:0.95rem;margin-bottom:3px}
+  .mod-desc{font-size:0.78rem;color:var(--muted)}
+  .mod-right{display:flex;flex-direction:column;align-items:flex-end;gap:4px}
+  .mod-status{font-size:0.75rem;font-weight:600;padding:3px 10px;border-radius:10px}
+  .mod-status.done{background:rgba(0,255,136,0.15);color:var(--green)}
+  .mod-status.open{background:rgba(0,212,255,0.15);color:var(--accent)}
+  .mod-status.lock{background:rgba(107,143,168,0.15);color:var(--muted)}
+  .mod-xp{font-size:0.7rem;color:var(--gold);font-weight:600}
+  .lesson-header{display:flex;align-items:center;gap:12px;margin-bottom:24px}
+  .back-btn{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:8px 12px;cursor:pointer;color:var(--accent);font-size:0.85rem;transition:all 0.2s;font-family:'Exo 2',sans-serif}
+  .back-btn:hover{background:var(--surface2);border-color:var(--accent)}
+  .lesson-title-hdr{font-family:'Orbitron',monospace;font-size:0.95rem;color:var(--accent)}
+  .lesson-card{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:28px;margin-bottom:16px;line-height:1.7}
+  .lesson-card h2{font-family:'Orbitron',monospace;font-size:1.05rem;color:var(--accent);margin-bottom:16px;padding-bottom:12px;border-bottom:1px solid var(--border)}
+  .lesson-card h3{font-size:0.95rem;color:var(--accent2);margin:20px 0 8px;display:flex;align-items:center;gap:8px}
+  .lesson-card p{font-size:0.9rem;color:#c5dce8;margin-bottom:12px}
+  .info-box{background:rgba(0,212,255,0.07);border:1px solid rgba(0,212,255,0.2);border-radius:10px;padding:14px 16px;margin:14px 0;font-size:0.85rem;color:#c5dce8}
+  .info-box.warning{background:rgba(255,107,53,0.07);border-color:rgba(255,107,53,0.25)}
+  .info-box.success{background:rgba(0,255,136,0.07);border-color:rgba(0,255,136,0.2)}
+  .info-box.danger{background:rgba(255,68,68,0.07);border-color:rgba(255,68,68,0.25)}
+  .info-box strong{display:block;margin-bottom:6px;font-size:0.9rem}
+  .rule-list{list-style:none;display:flex;flex-direction:column;gap:8px;margin:12px 0}
+  .rule-list li{display:flex;gap:10px;font-size:0.87rem;color:#c5dce8;align-items:flex-start}
+  .rule-list li::before{content:'▸';color:var(--accent);flex-shrink:0;margin-top:2px}
+  .tbl{width:100%;border-collapse:collapse;margin:14px 0;font-size:0.82rem}
+  .tbl th{background:rgba(0,212,255,0.1);color:var(--accent);padding:8px 12px;text-align:left;border:1px solid var(--border);font-family:'Orbitron',monospace;font-size:0.7rem;letter-spacing:1px}
+  .tbl td{padding:8px 12px;border:1px solid var(--border);color:#c5dce8}
+  .tbl tr:nth-child(even) td{background:rgba(255,255,255,0.02)}
+  .nav-btns{display:flex;gap:10px;margin-top:20px}
+  .btn{padding:12px 24px;border-radius:10px;border:none;cursor:pointer;font-family:'Exo 2',sans-serif;font-weight:600;font-size:0.9rem;transition:all 0.2s;flex:1}
+  .btn-primary{background:linear-gradient(135deg,var(--accent),#0099cc);color:#fff;box-shadow:0 4px 15px rgba(0,212,255,0.3)}
+  .btn-primary:hover{transform:translateY(-2px);box-shadow:0 6px 20px rgba(0,212,255,0.4)}
+  .btn-secondary{background:var(--surface2);color:var(--text);border:1px solid var(--border)}
+  .btn-secondary:hover{border-color:var(--accent);color:var(--accent)}
+  .btn-quiz{background:linear-gradient(135deg,var(--accent2),#cc4400);color:#fff;box-shadow:0 4px 15px rgba(255,107,53,0.3)}
+  .btn-quiz:hover{transform:translateY(-2px)}
+  .steps-nav{display:flex;gap:6px;margin-bottom:20px;flex-wrap:wrap}
+  .step-dot{width:32px;height:32px;border-radius:50%;border:2px solid var(--border);background:var(--surface);cursor:pointer;font-size:0.75rem;font-weight:700;color:var(--muted);display:flex;align-items:center;justify-content:center;transition:all 0.2s}
+  .step-dot.active{border-color:var(--accent);color:var(--accent);box-shadow:0 0 10px rgba(0,212,255,0.3)}
+  .step-dot.done{background:var(--green);border-color:var(--green);color:var(--bg)}
+  .quiz-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:24px}
+  .quiz-prog-bar{flex:1;height:6px;background:var(--surface2);border-radius:3px;margin:0 16px;overflow:hidden}
+  .quiz-prog-fill{height:100%;background:linear-gradient(90deg,var(--accent2),var(--gold));border-radius:3px;transition:width 0.4s ease}
+  .quiz-counter{font-family:'Orbitron',monospace;font-size:0.8rem;color:var(--muted)}
+  .quiz-card{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:28px;margin-bottom:16px}
+  .quiz-question{font-size:1rem;font-weight:600;margin-bottom:6px;line-height:1.5}
+  .quiz-ctx{font-size:0.8rem;color:var(--muted);margin-bottom:20px;font-style:italic}
+  .quiz-options{display:flex;flex-direction:column;gap:10px}
+  .quiz-opt{background:var(--surface2);border:2px solid var(--border);border-radius:10px;padding:13px 16px;cursor:pointer;transition:all 0.2s;font-size:0.88rem;text-align:left;color:var(--text);font-family:'Exo 2',sans-serif;display:flex;align-items:center;gap:12px}
+  .quiz-opt:hover:not(:disabled){border-color:var(--accent);background:rgba(0,212,255,0.08)}
+  .quiz-opt.correct{border-color:var(--green);background:rgba(0,255,136,0.1);color:var(--green)}
+  .quiz-opt.wrong{border-color:var(--red);background:rgba(255,68,68,0.1);color:var(--red)}
+  .opt-letter{width:26px;height:26px;border-radius:50%;border:1.5px solid currentColor;display:flex;align-items:center;justify-content:center;font-size:0.75rem;font-weight:700;flex-shrink:0;opacity:0.7}
+  .feedback-box{border-radius:12px;padding:14px 18px;margin-top:14px;font-size:0.87rem;line-height:1.5;display:none}
+  .feedback-box.show{display:block;animation:fadeIn 0.3s ease}
+  .feedback-box.correct-fb{background:rgba(0,255,136,0.1);border:1px solid rgba(0,255,136,0.3);color:var(--green)}
+  .feedback-box.wrong-fb{background:rgba(255,68,68,0.1);border:1px solid rgba(255,68,68,0.3);color:#ff9999}
+  .feedback-box strong{display:block;font-size:1rem;margin-bottom:4px}
+  .results-card{background:var(--surface);border:1px solid var(--border);border-radius:20px;padding:36px;text-align:center;margin-bottom:20px}
+  .score-circle{width:120px;height:120px;border-radius:50%;border:4px solid;display:flex;flex-direction:column;align-items:center;justify-content:center;margin:0 auto 20px}
+  .score-circle.pass{border-color:var(--green);box-shadow:0 0 30px rgba(0,255,136,0.3)}
+  .score-circle.fail{border-color:var(--red);box-shadow:0 0 30px rgba(255,68,68,0.3)}
+  .score-num{font-family:'Orbitron',monospace;font-size:2rem;font-weight:900}
+  .score-circle.pass .score-num{color:var(--green)}
+  .score-circle.fail .score-num{color:var(--red)}
+  .score-label{font-size:0.7rem;color:var(--muted)}
+  .results-title{font-family:'Orbitron',monospace;font-size:1.2rem;margin-bottom:8px}
+  .results-sub{color:var(--muted);font-size:0.9rem;margin-bottom:24px}
+  .xp-earned{display:inline-flex;align-items:center;gap:8px;background:rgba(255,215,0,0.1);border:1px solid rgba(255,215,0,0.3);border-radius:20px;padding:8px 20px;color:var(--gold);font-weight:700;font-size:1rem;margin-bottom:24px}
+  .wrong-sect{text-align:left;background:rgba(255,68,68,0.05);border:1px solid rgba(255,68,68,0.2);border-radius:12px;padding:16px;margin-bottom:20px}
+  .wrong-sect h3{font-size:0.85rem;color:var(--accent2);margin-bottom:12px}
+  .wrong-item{margin-bottom:12px;font-size:0.83rem;padding-bottom:10px;border-bottom:1px solid var(--border)}
+  .wrong-item:last-child{border-bottom:none;margin-bottom:0}
+  .wrong-item .wq{color:var(--text);font-weight:600;margin-bottom:3px}
+  .wrong-item .wa{color:var(--red);margin-bottom:2px}
+  .wrong-item .wc{color:var(--green)}
+  .ach-row{display:flex;gap:10px;flex-wrap:wrap;justify-content:center;margin:16px 0}
+  .ach{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:12px 16px;text-align:center;min-width:90px}
+  .ach.unlocked{border-color:rgba(255,215,0,0.4);background:rgba(255,215,0,0.05)}
+  .ach-icon{font-size:1.8rem;margin-bottom:4px;display:block}
+  .ach-name{font-size:0.7rem;color:var(--muted)}
+  .ach.unlocked .ach-name{color:var(--gold)}
+  .toast{position:fixed;bottom:24px;right:24px;background:var(--surface2);border:1px solid var(--green);border-radius:12px;padding:14px 20px;font-size:0.85rem;color:var(--green);z-index:1000;display:none;animation:slideIn 0.3s ease;max-width:280px}
+  @keyframes slideIn{from{transform:translateX(100%);opacity:0}to{transform:translateX(0);opacity:1}}
+  .divider{height:1px;background:var(--border);margin:20px 0}
+  .hl{color:var(--accent);font-weight:600}
+  .hl-o{color:var(--accent2);font-weight:600}
+  .hl-g{color:var(--green);font-weight:600}
+  .hl-r{color:var(--red);font-weight:600}
+  .hl-gold{color:var(--gold);font-weight:600}
+  .tag{display:inline-block;padding:2px 8px;border-radius:4px;font-size:0.72rem;font-weight:600}
+  .tag.c0{background:rgba(0,212,255,0.15);color:var(--accent)}
+  .tag.c1{background:rgba(255,215,0,0.12);color:var(--gold)}
+  .tag.c2{background:rgba(255,107,53,0.15);color:var(--accent2)}
+
+  /* ── LOGIN ── */
+  #screen-login{display:flex;align-items:center;justify-content:center;min-height:100vh;padding:20px;position:relative;z-index:1}
+  .login-box{background:var(--surface);border:1px solid rgba(0,212,255,0.35);border-radius:20px;padding:44px 36px 36px;max-width:420px;width:100%;text-align:center;box-shadow:var(--glow),0 24px 60px rgba(0,0,0,0.55)}
+  .login-logo{font-size:3.5rem;display:block;margin-bottom:12px;animation:floatDrone 3s ease-in-out infinite}
+  .login-title{font-family:"Orbitron",sans-serif;font-size:1.4rem;color:var(--accent);letter-spacing:2px;margin-bottom:4px}
+  .login-sub{font-family:"Orbitron",sans-serif;font-size:0.62rem;color:var(--muted);letter-spacing:3px;text-transform:uppercase;margin-bottom:30px}
+  .login-label{display:block;text-align:left;color:var(--muted);font-size:0.72rem;letter-spacing:1px;text-transform:uppercase;margin-bottom:7px}
+  .login-input{width:100%;background:var(--surface2);border:1.5px solid var(--border);border-radius:10px;padding:14px 18px;color:var(--text);font-family:"Exo 2",sans-serif;font-size:1rem;outline:none;transition:border-color .2s,box-shadow .2s;text-align:center;letter-spacing:2px}
+  .login-input:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(0,212,255,0.12)}
+  .login-input::placeholder{color:var(--muted);letter-spacing:0;font-size:.88rem}
+  .login-btn{width:100%;margin-top:14px;padding:15px;background:linear-gradient(135deg,var(--accent),#0099bb);border:none;border-radius:10px;color:#000;font-family:"Orbitron",sans-serif;font-size:.88rem;font-weight:700;cursor:pointer;transition:transform .15s,box-shadow .15s;letter-spacing:1px}
+  .login-btn:hover:not(:disabled){transform:translateY(-2px);box-shadow:0 8px 24px rgba(0,212,255,.4)}
+  .login-btn:disabled{opacity:.5;cursor:not-allowed}
+  .login-err{color:var(--red);font-size:.8rem;margin-top:10px;min-height:18px}
+  .login-info{color:var(--muted);font-size:.73rem;margin-top:16px;line-height:1.7;border-top:1px solid var(--border);padding-top:14px}
+  .login-returning{color:var(--green);font-size:.8rem;margin-top:8px;display:none}
+  .user-pill{display:inline-flex;align-items:center;gap:8px;background:var(--surface2);border:1px solid var(--border);border-radius:20px;padding:6px 14px;font-size:.8rem;color:var(--accent);cursor:pointer;transition:all .2s;font-family:"Exo 2",sans-serif}
+  .user-pill:hover{border-color:var(--accent);background:rgba(0,212,255,.06)}
+  .user-pill .pill-name{font-weight:600;color:var(--text)}
+</style>
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+import { getDatabase, ref, set, get } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
+const firebaseConfig = {
+  apiKey: "AIzaSyDWST4NKU_roqoGsMAAevs4zd-c4IqAOEU",
+  authDomain: "digitcode-d991e.firebaseapp.com",
+  databaseURL: "https://digitcode-d991e-default-rtdb.europe-west1.firebasedatabase.app",
+  projectId: "digitcode-d991e",
+  storageBucket: "digitcode-d991e.firebasestorage.app",
+  messagingSenderId: "958984288633",
+  appId: "1:958984288633:web:c88980de5de0a5422597a8"
+};
+const _app = initializeApp(firebaseConfig);
+const _db = getDatabase(_app);
+window._fbSave = async (user, s) => {
+  try { await set(ref(_db,'drones/'+user),{xp:s.xp,lives:s.lives,streak:s.streak,completed:s.completed,achs:s.achs,ts:Date.now()}); }
+  catch(e){ console.warn('fbSave',e); }
+};
+window._fbLoad = async (user) => {
+  try { const sn=await get(ref(_db,'drones/'+user)); return sn.exists()?sn.val():null; }
+  catch(e){ console.warn('fbLoad',e); return null; }
+};
+</script>
+</head>
+<body>
+<div id="screen-login">
+  <div class="login-box">
+    <span class="login-logo">🚁</span>
+    <div class="login-title">DRONEACADEMY ES</div>
+    <div class="login-sub">Curso Pilotaje · Normativa 2026</div>
+    <label class="login-label" for="login-name">Tu nombre de piloto</label>
+    <input class="login-input" id="login-name" type="text" maxlength="24"
+      placeholder="Escribe tu nombre..." autocomplete="off"
+      onkeydown="if(event.key==='Enter')doLogin()">
+    <button class="login-btn" id="login-btn" onclick="doLogin()">🚀 ENTRAR AL CURSO</button>
+    <div class="login-err" id="login-err"></div>
+    <div class="login-returning" id="login-returning">✅ ¡Bienvenido de nuevo! Cargando tu progreso...</div>
+    <div class="login-info">
+      Escribe tu nombre para guardar tu progreso.<br>
+      Si ya has jugado antes, se recuperará automáticamente.
+    </div>
+  </div>
+</div>
+
+<div class="app" id="app-wrap" style="display:none">
+<div class="toast" id="toast"></div>
+<header>
+  <div class="logo">DRONE<span>ACADEMY</span> ES</div>
+  <div class="header-stats">
+    <div class="stat-chip xp">⚡ <span id="hxp">0</span> XP</div>
+    <div class="stat-chip lives">❤️ <span id="hlives">3</span></div>
+    <div class="stat-chip streak">🔥 <span id="hstreak">0</span></div>
+    <div class="user-pill" onclick="logOut()" title="Cerrar sesión"><span>🧑‍✈️</span><span class="pill-name" id="huser">—</span><span style="color:var(--muted);font-size:.65rem">✕</span></div>
+  </div>
+</header>
+<div class="main">
+
+<!-- HOME -->
+<div class="screen active" id="screen-home">
+  <div class="hero">
+    <span class="drone-icon">🚁</span>
+    <h1>PILOTA CON LA LEY</h1>
+    <p>Curso oficial de pilotaje de drones para España — Normativa AESA 2026</p>
+    <div class="badge-row">
+      <span class="badge">📍 España · AESA</span>
+      <span class="badge">📅 RD 517/2024</span>
+      <span class="badge">⚖️ UE 2019/945 · 2019/947</span>
+      <span class="badge">🎯 DJI Neo · C0 · A1</span>
+    </div>
+  </div>
+  <div class="progress-section">
+    <div class="progress-header">
+      <span class="progress-title">TU PROGRESO</span>
+      <span class="progress-pct" id="ppct">0%</span>
+    </div>
+    <div class="progress-bar"><div class="progress-fill" id="pfill" style="width:0%"></div></div>
+    <div style="margin-top:10px;font-size:0.78rem;color:var(--muted)" id="plabel">Empieza con el Módulo 1 👇</div>
+  </div>
+  <div class="section-label">MÓDULOS DEL CURSO</div>
+  <div class="modules-grid" id="mods-list"></div>
+  <div class="divider"></div>
+  <div class="section-label">LOGROS</div>
+  <div class="ach-row" id="ach-row"></div>
+</div>
+
+<!-- LESSON -->
+<div class="screen" id="screen-lesson">
+  <div class="lesson-header">
+    <button class="back-btn" onclick="goHome()">← INICIO</button>
+    <div class="lesson-title-hdr" id="ltitle"></div>
+  </div>
+  <div class="steps-nav" id="steps-nav"></div>
+  <div id="lesson-content"></div>
+</div>
+
+<!-- QUIZ -->
+<div class="screen" id="screen-quiz">
+  <div class="lesson-header">
+    <button class="back-btn" onclick="goHome()">← INICIO</button>
+    <div class="lesson-title-hdr" id="qtitle"></div>
+  </div>
+  <div class="quiz-header">
+    <span class="quiz-counter" id="qcounter">1/5</span>
+    <div class="quiz-prog-bar"><div class="quiz-prog-fill" id="qpfill" style="width:0%"></div></div>
+    <div class="stat-chip lives" style="padding:4px 10px">❤️ <span id="qlives">3</span></div>
+  </div>
+  <div class="quiz-card">
+    <div class="quiz-question" id="qq"></div>
+    <div class="quiz-ctx" id="qctx"></div>
+    <div class="quiz-options" id="qopts"></div>
+    <div class="feedback-box" id="qfb"></div>
+  </div>
+  <button class="btn btn-primary" id="qnext" onclick="nextQ()" style="display:none">SIGUIENTE →</button>
+</div>
+
+<!-- RESULTS -->
+<div class="screen" id="screen-results">
+  <div class="lesson-header">
+    <button class="back-btn" onclick="goHome()">← INICIO</button>
+    <div class="lesson-title-hdr">RESULTADOS</div>
+  </div>
+  <div class="results-card">
+    <div class="score-circle" id="scircle">
+      <span class="score-num" id="snum">0%</span>
+      <span class="score-label">PUNTUACIÓN</span>
+    </div>
+    <div class="results-title" id="rtitle"></div>
+    <div class="results-sub" id="rsub"></div>
+    <div class="xp-earned" id="rxp">⚡ +0 XP</div>
+    <div class="wrong-sect" id="wsect" style="display:none">
+      <h3>🔄 Repasa estos conceptos</h3>
+      <div id="wlist"></div>
+    </div>
+    <div class="nav-btns">
+      <button class="btn btn-secondary" onclick="retryQuiz()">🔄 REPETIR</button>
+      <button class="btn btn-primary" onclick="goHome()">🏠 INICIO</button>
+    </div>
+  </div>
+</div>
+
+</div><!-- /main -->
+</div><!-- /app -->
+
+<script>
+// ════════════════════════════════════════════════
+//  MÓDULOS — Contenido basado en PDF oficial AESA
+// ════════════════════════════════════════════════
+const MODS = [
+{
+  id:1, icon:'📖', name:'Terminología y Actores Clave',
+  desc:'UAS vs RPAS vs dron, piloto a distancia vs operador, EASA vs AESA y contexto histórico',
+  xp:100,
+  lessons:[{
+    title:'Terminología oficial y actores clave',
+    html:`<div class="lesson-card">
+<h2>📖 Conceptos Básicos — Lo que Dice el Reglamento UE</h2>
+<p>Los reglamentos europeos <span class="hl">2019/945 y 2019/947</span> siempre usan el término <span class="hl">UAS</span>. En el día a día escucharás otros términos. Aquí los aclaramos con la definición oficial.</p>
+<h3>🔠 UAS, RPAS, Dron y Aeromodelo</h3>
+<table class="tbl"><thead><tr><th>Término</th><th>Definición oficial</th><th>¿Oficial en el Reglamento UE?</th></tr></thead><tbody>
+<tr><td><strong>UAS</strong></td><td>Sistema de aeronave no tripulada + equipo de control. Engloba RPAS y aeronaves autónomas (sin posibilidad de intervención del piloto).</td><td>✅ Sí, es el término oficial</td></tr>
+<tr><td><strong>RPAS</strong></td><td>Aeronave pilotada a distancia donde el piloto <em>puede intervenir</em> durante el vuelo.</td><td>⚠️ Uso técnico específico</td></tr>
+<tr><td><strong>Dron</strong></td><td>Término coloquial para cualquier aeronave no tripulada.</td><td>❌ No reglamentario</td></tr>
+<tr><td><strong>Aeromodelo</strong></td><td>Aeronave de tamaño reducido para vuelos deportivos o experimentales.</td><td>❌ No reglamentario</td></tr>
+</tbody></table>
+<div class="info-box"><strong>💡 Clave para el examen</strong>RPAS, dron y aeromodelo son subconjuntos de UAS. La diferencia entre RPAS y operación autónoma: en el RPAS el piloto <em>puede intervenir</em> en cualquier momento del vuelo. En los reglamentos UE solo verás el término UAS.</div>
+
+<h3>👤 Piloto a Distancia vs Operador de UAS — Roles distintos</h3>
+<table class="tbl"><thead><tr><th>Rol</th><th>Definición</th><th>Edad mínima en España</th></tr></thead><tbody>
+<tr><td><strong>Piloto a distancia</strong></td><td>Persona física responsable de la conducción segura del vuelo, manualmente o supervisando vuelo automático, siendo capaz de intervenir en cualquier momento.</td><td>12 años (C0 en A1)</td></tr>
+<tr><td><strong>Operador de UAS</strong></td><td>Cualquier persona física o jurídica propietaria o arrendataria del UAS. Si vuelas tu propio dron en tu tiempo libre, eres operador Y piloto a la vez.</td><td><strong>16 años siempre</strong></td></tr>
+</tbody></table>
+<div class="info-box warning"><strong>⚠️ Importante: Piloto ≠ Operador registrado</strong>
+Un menor de 16 años puede ser <span class="hl-g">PILOTO</span> con C0 desde los 12 años. Pero el <span class="hl-o">OPERADOR registrado</span> en AESA siempre debe tener al menos <strong>16 años</strong>.<br><br>
+👉 Si tienes 13 años y quieres pilotar tu DJI Neo, necesitas un adulto (≥16 años) registrado como operador que te designe como piloto. El piloto menor vuela bajo la responsabilidad del operador registrado.</div>
+
+<h3>🏛️ EASA vs AESA — ¿Quién regula qué?</h3>
+<ul class="rule-list">
+<li><span class="hl">EASA</span> (Agencia de la UE para la Seguridad Aérea): redacta los reglamentos comunes para los <strong>31 estados miembros</strong>. Publicó el Reglamento 2019/945 (diseño de UAS) y el 2019/947 (operaciones). Son de <strong>aplicación directa</strong> en toda la UE sin necesitar transposición.</li>
+<li><span class="hl">AESA</span> (Agencia Estatal de Seguridad Aérea, España): aplica y complementa los reglamentos europeos con normativa nacional (Real Decreto 517/2024). Tiene la <strong>potestad sancionadora</strong> en España.</li>
+<li>El Material Guía (GM) y los Medios Aceptables de Cumplimiento (AMC) de EASA <span class="hl-r">no son vinculantes</span>, pero ayudan a interpretar los reglamentos obligatorios.</li>
+</ul>
+
+<h3>📅 Contexto Histórico — Evolución de la Normativa</h3>
+<ul class="rule-list">
+<li><span class="hl-gold">2014:</span> Ley 18/2014 — primer marco legal en España para RPAS (artículo 50).</li>
+<li><span class="hl-gold">2017:</span> Real Decreto 1036/2017 — regula el uso civil de RPAS en España, derogando el artículo 50 de la Ley 18/2014.</li>
+<li><span class="hl-gold">Junio 2019:</span> EASA publica los Reglamentos UE 2019/945 y 2019/947 — marco europeo unificado para todos los estados miembros.</li>
+<li><span class="hl-gold">2024:</span> Real Decreto 517/2024 — actualiza el marco jurídico español al reglamento europeo vigente.</li>
+</ul>
+</div>`
+  }],
+  quiz:[
+    {q:'¿Cuál es el término oficial que usan los reglamentos europeos 2019/945 y 2019/947?',ctx:'Hay varios términos coloquiales pero solo uno es el oficial en la normativa UE.',opts:['Dron','RPAS','UAS','Aeromodelo'],correct:2,explain:'Los reglamentos europeos siempre usan el término UAS. Dron, RPAS y aeromodelo son términos coloquiales o técnicos que quedan englobados dentro del concepto de UAS.'},
+    {q:'¿Qué diferencia hay entre un RPAS y una aeronave autónoma?',ctx:'Ambas son tipos de UAS, pero el papel del piloto es completamente diferente.',opts:['El RPAS es más pesado','En el RPAS el piloto puede intervenir durante el vuelo; en la autónoma no puede','El RPAS no necesita piloto','Son exactamente lo mismo'],correct:1,explain:'En un RPAS el piloto a distancia puede intervenir y cambiar el rumbo en cualquier momento. En una aeronave autónoma el piloto no puede intervenir durante el vuelo: el sistema vuela solo según programación.'},
+    {q:'Tienes 14 años y quieres volar tu DJI Neo. ¿Puedes ser el operador registrado en AESA?',ctx:'Recuerda la diferencia entre edad mínima de piloto y de operador registrado.',opts:['Sí, desde los 12 años','Sí, desde los 14 años','No, la edad mínima para operador es 16 años','No, necesitas 18 años'],correct:2,explain:'La edad mínima para ser OPERADOR registrado en AESA es 16 años siempre. Puedes ser PILOTO con C0 desde los 12 años, pero necesitas que un adulto (≥16 años) esté registrado como operador y te designe como piloto.'},
+    {q:'¿Qué organismo tiene potestad sancionadora sobre el uso de drones en España?',ctx:'Hay una agencia europea y una española. Solo una puede sancionar en territorio español.',opts:['EASA','Eurocontrol','ENAIRE','AESA'],correct:3,explain:'AESA (Agencia Estatal de Seguridad Aérea) es quien aplica y hace cumplir la normativa en España con potestad sancionadora. EASA redacta los reglamentos europeos comunes pero no sanciona directamente a los pilotos.'},
+    {q:'¿Son vinculantes los Medios Aceptables de Cumplimiento (AMC) publicados por EASA?',ctx:'EASA publica distintos tipos de documentos con diferente valor legal.',opts:['Sí, de obligado cumplimiento en la UE','No, son orientativos y no obligan','Solo son vinculantes en España','Solo si AESA los adopta formalmente'],correct:1,explain:'Los AMC y el Material Guía (GM) de EASA NO son vinculantes. Solo orientan sobre cómo cumplir los reglamentos. Los únicos documentos vinculantes en su totalidad son los Reglamentos de Ejecución y Delegados de la Comisión Europea.'}
+  ]
+},
+{
+  id:2, icon:'🌍', name:'Clases de Drones C0–C4 y Categorías',
+  desc:'Requisitos técnicos por clase, las 3 categorías operacionales y tu DJI Neo en A1',
+  xp:110,
+  lessons:[{
+    title:'Clases C0 a C4 y las 3 categorías operacionales',
+    html:`<div class="lesson-card">
+<h2>🌍 Clasificación Europea — Clases C0 a C4</h2>
+<p>El <span class="hl">Reglamento Delegado (UE) 2019/945</span> establece los requisitos técnicos de los UAS según su clase. El <span class="hl">Reglamento de Ejecución (UE) 2019/947</span> define en qué condiciones puede operarlos.</p>
+
+<h3>🏷️ Tabla de Clases de Drones</h3>
+<table class="tbl"><thead><tr><th>Clase</th><th>Peso máx.</th><th>Subcategoría</th><th>Características técnicas clave</th></tr></thead><tbody>
+<tr><td><span class="tag c0">C0</span></td><td>&lt;250 g</td><td>A1</td><td>Eléctrico, vel. &lt;19 m/s, altura limitada a 120 m por diseño, diseñado para no dañar personas</td></tr>
+<tr><td><span class="tag c1">C1</span></td><td>&lt;900 g</td><td>A1/A3</td><td>Identificación a distancia, geoconsciencia, luces nocturnas, número de serie único</td></tr>
+<tr><td><span class="tag c2">C2</span></td><td>&lt;4 kg</td><td>A2/A3</td><td>Modo baja velocidad (&lt;3 m/s), enlace datos protegido ante interferencias, identificación a distancia</td></tr>
+<tr><td>C3</td><td>&lt;25 kg</td><td>A3</td><td>Dimensión máxima &lt;3 m, geoconsciencia, identificación a distancia</td></tr>
+<tr><td>C4</td><td>&lt;25 kg</td><td>A3</td><td>Sin modo automático excepto estabilización básica y RTH en pérdida de señal</td></tr>
+</tbody></table>
+
+<div class="info-box success"><strong>✅ Tu DJI Neo = Clase C0 — Subcategoría A1</strong>
+El DJI Neo pesa menos de 250 g y tiene marcado C0. Sus características técnicas: motor eléctrico, velocidad máxima &lt;19 m/s, diseñado para minimizar daños a personas, altura de vuelo limitada a 120 m por diseño, comercializado con instrucciones del fabricante.</div>
+
+<h3>⚠️ El mito más extendido sobre los &lt;250 g</h3>
+<div class="info-box danger"><strong>🚫 FALSO: "Un dron de menos de 250 g no necesita nada"</strong>
+Si tu dron tiene <span class="hl">cámara, micrófono u otro sensor</span> capaz de captar datos personales, el operador DEBE registrarse en AESA aunque el dron pese menos de 250 g. La excepción de no registrarse solo aplica a drones sin sensores (juguetes conforme a Directiva 2009/48/CE).</div>
+
+<h3>🗂️ Las 3 Categorías Operacionales</h3>
+<table class="tbl"><thead><tr><th>Categoría</th><th>Riesgo</th><th>Autorización</th><th>¿Para quién?</th></tr></thead><tbody>
+<tr><td><strong>Abierta</strong></td><td>Bajo</td><td>❌ No se requiere</td><td>La gran mayoría de usuarios recreativos. Hasta 25 kg, VLOS, máx. 120 m.</td></tr>
+<tr><td><strong>Específica</strong></td><td>Medio</td><td>✅ Declaración o autorización</td><td>Operaciones fuera de los límites de la categoría abierta. Requiere estudio de seguridad o escenario estándar (STS).</td></tr>
+<tr><td><strong>Certificada</strong></td><td>Alto</td><td>✅ Certificación completa</td><td>Transporte de personas, mercancías peligrosas de alto riesgo, UAS &gt;3 m sobre concentraciones.</td></tr>
+</tbody></table>
+
+<h3>📐 La Excepción a los 120 m de Altura</h3>
+<div class="info-box"><strong>📏 Regla del obstáculo alto — La única excepción</strong>
+Si sobrevuelas un obstáculo de <strong>más de 105 m</strong> de altura que se encuentre a <strong>menos de 50 m del piloto</strong>, puedes volar hasta <strong>15 m por encima</strong> de ese obstáculo.<br><br>
+Ejemplo: edificio de 120 m a 40 m del piloto → puedes volar hasta 135 m.<br><br>
+⚠️ <strong>¿Por qué no más de 120 m?</strong> El límite inferior de la aviación general es 150 m. Solo hay 30 m de separación entre los UAS y las aeronaves tripuladas. La seguridad es prioritaria.</div>
+
+<h3>🔖 Clases C5 y C6 — Para escenarios estándar (STS)</h3>
+<p>El Reglamento Delegado (UE) 2020/1058 introdujo las clases C5 y C6, diseñadas específicamente para operaciones en la categoría <span class="hl">específica</span> bajo escenarios estándar. No son relevantes para el uso recreativo ni para el DJI Neo.</p>
+</div>`
+  }],
+  quiz:[
+    {q:'¿Qué clase CE corresponde al DJI Neo (menos de 250 g con cámara)?',ctx:'Es la clase más básica y ligera del sistema de clasificación europeo.',opts:['Clase C1','Clase C0','Clase C2','Sin clasificación'],correct:1,explain:'Los drones de menos de 250 g con marcado CE son Clase C0. Operan en subcategoría A1. Deben ser eléctricos, velocidad máxima <19 m/s y diseñados para minimizar daños a personas.'},
+    {q:'¿Cuántas categorías operacionales define el Reglamento UE 2019/947?',ctx:'Se organizan de menor a mayor nivel de riesgo e intervención regulatoria.',opts:['2','3','4','6'],correct:1,explain:'El Reglamento 2019/947 define 3 categorías: Abierta (bajo riesgo, sin autorización), Específica (riesgo medio, declaración o autorización) y Certificada (alto riesgo, régimen similar a aviación tripulada).'},
+    {q:'Estás junto a una antena de 110 m a 45 m de distancia. ¿Cuál es la altura máxima de vuelo?',ctx:'Aplica la excepción a los 120 m para obstáculos altos cercanos.',opts:['120 m','125 m sobre el terreno','125 m sobre la cima del obstáculo','150 m'],correct:2,explain:'La excepción aplica: obstáculo >105 m a menos de 50 m del piloto → puedes volar hasta 15 m por encima. 110 m (obstáculo) + 15 m = 125 m sobre la cima de la antena. Esta es la única excepción al límite general de 120 m.'},
+    {q:'Tienes un dron C0 con cámara que pesa 200 g. ¿El operador debe registrarse en AESA?',ctx:'El peso no es el único criterio para determinar la obligación de registro.',opts:['No, pesa menos de 250 g','Sí, porque tiene cámara (sensor de datos personales)','Solo si lo usa comercialmente','Solo si vuela en ciudad'],correct:1,explain:'Sí debe registrarse. La cámara es un sensor capaz de captar datos personales. La obligación de registro aplica a cualquier UAS con sensor aunque pese menos de 250 g. La excepción solo es para drones sin sensores (juguetes sin cámara).'},
+    {q:'¿Qué reglamento europeo regula el DISEÑO y FABRICACIÓN de los drones C0-C4?',ctx:'Hay dos reglamentos clave: uno para operaciones y otro para diseño/fabricación.',opts:['Reglamento UE 2019/947','Reglamento UE 2019/945','Real Decreto 517/2024','Reglamento UE 2020/639'],correct:1,explain:'El Reglamento Delegado (UE) 2019/945 regula el diseño, fabricación y comercialización de los UAS de clases C0 a C4. El Reglamento 2019/947 regula las operaciones, el personal y las condiciones de vuelo.'}
+  ]
+},
+{
+  id:3, icon:'📋', name:'Registro en AESA y Responsabilidades',
+  desc:'Quién debe registrarse, cómo funciona el número de operador y las responsabilidades legales',
+  xp:120,
+  lessons:[{
+    title:'Registro de operador y responsabilidades legales',
+    html:`<div class="lesson-card">
+<h2>📋 Registro en AESA — Operador y Piloto</h2>
+
+<h3>🎯 ¿Quién DEBE registrarse como operador?</h3>
+<p>En categoría <span class="hl">abierta</span>, un operador de UAS debe registrarse cuando:</p>
+<ul class="rule-list">
+<li>El dron tenga una <span class="hl">MTOM superior a 250 g</span>, o</li>
+<li>El dron esté equipado con un <span class="hl">sensor capaz de captar datos personales</span> (cámara, micrófono) — aunque pese menos de 250 g.</li>
+</ul>
+<p>En categoría <span class="hl">específica</span> el registro es obligatorio <strong>siempre</strong>, independientemente del dron.</p>
+
+<div class="info-box success"><strong>✅ El registro es GRATUITO, ONLINE y válido en toda Europa</strong>
+Se hace en la Sede Electrónica de AESA. Una vez registrado, tu número es válido en los <strong>31 estados miembros de EASA</strong>. Solo puedes registrarte en UN estado miembro (el de tu residencia si eres persona física).</div>
+
+<h3>🔢 El número de operador — Cómo usarlo correctamente</h3>
+<ul class="rule-list">
+<li>AESA expide un <span class="hl">número de registro único</span> (ejemplo: ESP87astrdge12k8).</li>
+<li>Ese número <span class="hl-g">debe estar indicado físicamente en TODOS tus UAS</span> — pegado en el dron para que las autoridades puedan identificar al operador si hay un incidente.</li>
+<li>⚠️ El número <span class="hl-r">debe mantenerse en privado</span> — es un dato sensible. <strong>No lo publiques en redes sociales, vídeos ni online</strong>. Acceso solo para autoridades.</li>
+</ul>
+<div class="info-box warning"><strong>⚠️ En el dron SÍ, en internet NO</strong>
+El número va en el dron para identificación por autoridades en caso de incidente o accidente. Pero al ser un dato personal sensible, no debe hacerse público digitalmente. Para drones C0 basta con una etiqueta adhesiva normal (no hace falta placa ignífuga).</div>
+
+<h3>📋 Responsabilidades del Operador en Categoría Abierta</h3>
+<ul class="rule-list">
+<li>Elaborar <span class="hl">medidas de atenuación</span> según el riesgo de cada tipo de operación.</li>
+<li>Designar a un <span class="hl">piloto para cada operación</span> (control intransferible) y garantizar que tiene la formación adecuada.</li>
+<li>Actualizar el <span class="hl">sistema de geoconsciencia</span> del UAS antes de cada vuelo cuando sea aplicable.</li>
+<li>Tener la <span class="hl">declaración de conformidad</span> del UAS si tiene marcado de clase.</li>
+<li>En A2/A3 con personas participantes: asegurar que han sido <span class="hl">informadas y aceptado explícitamente</span> los riesgos.</li>
+</ul>
+
+<h3>🧑‍✈️ Responsabilidades del Piloto a Distancia en Categoría Abierta</h3>
+<ul class="rule-list">
+<li>Tener la <span class="hl">formación necesaria</span> y portar la prueba durante el vuelo (certificado o prueba de formación online).</li>
+<li>El piloto es el <span class="hl-o">último responsable de la seguridad aérea</span> de la operación en todo momento.</li>
+<li><span class="hl-r">No volar cerca de zonas de emergencia</span> salvo permiso expreso del servicio de emergencia responsable.</li>
+<li><span class="hl-r">No volar bajo efectos de alcohol o sustancias psicoactivas</span> ni en condiciones físicas inadecuadas para volar.</li>
+<li>No superar la MTOM del UAS ni <span class="hl-r">modificar el dron</span> en contra de lo establecido por el fabricante.</li>
+<li>Respetar en todo momento los <span class="hl">límites operacionales</span> definidos en la zona geográfica del lugar de la operación.</li>
+</ul>
+
+<h3>👶 Tabla de Edades Mínimas en España</h3>
+<table class="tbl"><thead><tr><th>Rol / Tipo de UAS</th><th>Subcategoría</th><th>Edad mínima</th></tr></thead><tbody>
+<tr><td>Operador registrado en AESA</td><td>Cualquiera</td><td><strong>16 años siempre</strong></td></tr>
+<tr><td>Piloto con UAS C0</td><td>A1</td><td>12 años</td></tr>
+<tr><td>Piloto con UAS &lt;250 g sin clase (mercado antes 01/01/2023)</td><td>A1</td><td>12 años</td></tr>
+<tr><td>Piloto con UAS C1</td><td>A1</td><td>14 años</td></tr>
+<tr><td>Piloto con UAS C2, C3 o C4</td><td>A2/A3</td><td>14 años</td></tr>
+<tr><td>Piloto en categoría específica</td><td>Específica</td><td>16 años</td></tr>
+<tr><td>Cualquier piloto bajo supervisión de piloto ≥16 años</td><td>Cualquiera</td><td>Sin mínima</td></tr>
+</tbody></table>
+</div>`
+  }],
+  quiz:[
+    {q:'¿Cuál es la edad mínima para registrarse como OPERADOR en AESA en España?',ctx:'Distingue entre el rol de piloto a distancia y el de operador registrado.',opts:['12 años','14 años','16 años','18 años'],correct:2,explain:'La edad mínima para ser OPERADOR registrado en AESA es 16 años, siempre, independientemente del tipo de dron. La edad de 12 años es solo para ser PILOTO con C0 en A1, siempre bajo responsabilidad de un operador adulto.'},
+    {q:'Tu DJI Neo (187 g con cámara 4K) — ¿el operador debe registrarse en AESA?',ctx:'El peso no es el único criterio: piensa en qué sensores lleva.',opts:['No, pesa menos de 250 g','Sí, porque tiene cámara (sensor de datos personales)','Solo si lo usa en ciudad','Solo para uso profesional'],correct:1,explain:'Sí debe registrarse. El DJI Neo tiene cámara, que es un sensor capaz de captar datos personales. La obligación de registro aplica aunque pese menos de 250 g. Solo están exentos los drones sin sensores (juguetes básicos sin cámara ni micrófono).'},
+    {q:'¿En cuántos estados miembros de EASA puedes registrarte como operador simultáneamente?',ctx:'El registro tiene validez pan-europea pero con una condición importante.',opts:['En todos donde vueles','En tantos como países de la UE visites','Solo en 1 estado miembro','En hasta 3 países'],correct:2,explain:'Solo puedes registrarte en UN estado miembro de EASA: el de tu residencia si eres persona física, o donde tengas tu centro de actividad principal si eres empresa. Pero ese número de registro es válido en los 31 estados miembros.'},
+    {q:'¿Cómo debe gestionarse el número de operador de AESA?',ctx:'Hay dos aspectos: dónde colocarlo físicamente y cómo manejarlo públicamente.',opts:['Publicarlo en todos tus vídeos para ser transparente','Colocarlo físicamente en el dron pero NO publicarlo online (dato privado)','Solo comunicarlo a AESA, no en el dron','Colocarlo solo en el mando a distancia'],correct:1,explain:'El número de operador debe estar físicamente en el dron para identificación por autoridades, pero debe mantenerse en privado: no lo publiques en redes sociales, vídeos ni internet. Para C0 basta una etiqueta adhesiva.'},
+    {q:'¿Quién es el último responsable de la seguridad aérea durante una operación con dron?',ctx:'Aunque hay operador y piloto, la responsabilidad final recae en alguien específico.',opts:['El operador de UAS','El observador de la aeronave','El piloto a distancia','AESA como organismo regulador'],correct:2,explain:'El piloto a distancia es SIEMPRE el último responsable de la seguridad aérea de la operación. Aunque el operador lo designe y sea el responsable legal del aparato, el piloto no puede delegar la seguridad del vuelo en nadie.'}
+  ]
+},
+{
+  id:4, icon:'⚖️', name:'Reglas de Vuelo — Categoría Abierta',
+  desc:'Las 6 condiciones generales + reglas específicas para A1 (tu DJI Neo), A2 y A3',
+  xp:150,
+  lessons:[
+    {
+      title:'Las 6 condiciones generales de vuelo',
+      html:`<div class="lesson-card">
+<h2>⚖️ Las 6 Condiciones Generales de Vuelo — Aplican a A1, A2 y A3</h2>
+<p>Estas 6 reglas aplican a <span class="hl">TODAS las subcategorías</span> de la categoría abierta. Son la base de cualquier vuelo legal.</p>
+
+<h3>1️⃣ VLOS — Siempre dentro de tu vista directa</h3>
+<p>El piloto volará siempre en modo <span class="hl">VLOS (Visual Line of Sight)</span> — el dron debe estar a la vista directa, sin instrumentos ni binoculares.</p>
+<div class="info-box"><strong>📌 Dos excepciones al VLOS en categoría abierta</strong>
+1. <strong>Modo sígueme:</strong> el dron te sigue automáticamente dentro de un radio predeterminado.<br>
+2. <strong>Con observador de aeronave:</strong> una persona situada junto al piloto mantiene el contacto visual con el dron → el piloto SÍ puede usar FPV (First Person View / gafas de visión).<br><br>
+⚠️ El observador NO sirve para ampliar el rango de vuelo más allá del alcance visual. En ningún caso.</div>
+
+<h3>2️⃣ Altura máxima: 120 metros sobre el terreno</h3>
+<p>No se permite volar a más de <span class="hl">120 m del punto más próximo de la superficie</span>. El límite inferior de la aviación general es 150 m — solo hay 30 m de margen de seguridad.</p>
+<div class="info-box warning"><strong>⚠️ Excepción: obstáculo de más de 105 m a menos de 50 m del piloto</strong>
+En ese caso se puede volar hasta 15 m por encima del obstáculo. Fuera de esta situación específica: nunca superes los 120 m. AESA puede establecer límites inferiores en ciertas zonas geográficas.</div>
+
+<h3>3️⃣ Encuentro con aeronave tripulada</h3>
+<ul class="rule-list">
+<li>Reduce la altura de vuelo inmediatamente.</li>
+<li>Realiza maniobras evasivas si hay riesgo de colisión.</li>
+<li>Aterriza lo antes posible.</li>
+<li><span class="hl-r">Interrumpe el vuelo</span> si su continuación puede suponer riesgo para la aeronave tripulada.</li>
+</ul>
+
+<h3>4️⃣ Concentraciones de personas — prohibición absoluta</h3>
+<p>Nunca está permitido el sobrevuelo de <span class="hl-r">concentraciones de personas</span> (reuniones donde no puedan apartarse por la densidad). Se debe mantener una distancia segura con personas no participantes.</p>
+<div class="info-box"><strong>📏 ¿Qué es una concentración de personas?</strong>
+Reuniones en las que las personas <em>no pueden evitar el impacto</em> de un UAS en caída libre debido a la densidad y el espacio. Ejemplos: conciertos, manifestaciones, mercados concurridos, estadios. La distancia segura depende de la subcategoría.</div>
+
+<h3>5️⃣ El observador de la aeronave</h3>
+<p>El piloto puede contar con un observador que le ayude. El observador se sitúa junto al piloto y le ayuda a: mantener distancia a obstáculos y mantener la consciencia situacional.</p>
+<div class="info-box warning"><strong>⚠️ Límite del observador</strong>
+El objetivo del observador NO es ampliar el rango de vuelo más allá del alcance visual del piloto. El piloto siempre es el último responsable de la seguridad.</div>
+
+<h3>6️⃣ Mercancías peligrosas y lanzamiento de objetos</h3>
+<div class="info-box danger"><strong>🚫 Absolutamente prohibido en categoría abierta</strong>
+• Transportar mercancías peligrosas (explosivos, gases, líquidos inflamables, sustancias radiactivas, tóxicas, corrosivas, etc.).<br>
+• Dejar caer o proyectar cualquier material u objeto desde el dron.</div>
+</div>`
+    },
+    {
+      title:'Condiciones particulares por subcategoría',
+      html:`<div class="lesson-card">
+<h2>📐 Condiciones Particulares por Subcategoría A1, A2 y A3</h2>
+<p>Además de las 6 condiciones generales, cada subcategoría tiene reglas específicas adicionales.</p>
+
+<h3>🟢 Subcategoría A1 — Tu caso con el DJI Neo (C0)</h3>
+<table class="tbl"><thead><tr><th>Tipo de UAS</th><th>Sobrevuelo personas no participantes</th><th>Concentraciones</th><th>Formación piloto</th></tr></thead><tbody>
+<tr><td>Construcción privada &lt;250 g / C0 / &lt;250 g sin clase (antes 2023)</td><td>✅ Permitido (respetando privacidad y protección de datos)</td><td>❌ Siempre prohibido</td><td>Familiarización con instrucciones del fabricante</td></tr>
+<tr><td>C1</td><td>❌ Prohibido sobre personas no participantes</td><td>❌ Siempre prohibido</td><td>Formación online AESA + examen A1/A3</td></tr>
+</tbody></table>
+
+<h3>🟡 Subcategoría A2 — Para drones C2</h3>
+<ul class="rule-list">
+<li>Distancia mínima a personas no participantes: <span class="hl">30 m horizontales</span>.</li>
+<li>Con modo baja velocidad activado (&lt;3 m/s): puede reducirse a <span class="hl">5 m mínimo</span> — aplica la <strong>regla 1:1</strong>: la altura se reduce en la misma proporción que la distancia horizontal.</li>
+<li>Concentraciones de personas: siempre prohibido.</li>
+<li>Formación: online + examen teórico + autoformación práctica en zona aislada (condiciones A3) + examen presencial adicional → "Certificado de competencia de piloto a distancia".</li>
+</ul>
+
+<h3>🔴 Subcategoría A3 — Para C2, C3, C4 y construcción privada hasta 25 kg</h3>
+<ul class="rule-list">
+<li>Volar en zonas donde <span class="hl-g">no se espera poner en peligro a ninguna persona no participante</span> durante todo el vuelo.</li>
+<li>Distancia mínima horizontal de <span class="hl">150 m</span> de zonas residenciales, comerciales, industriales o recreativas.</li>
+<li>Formación: igual que A1 (familiarización con fabricante + curso online + examen).</li>
+</ul>
+
+<h3>📊 Resumen comparativo de subcategorías</h3>
+<table class="tbl"><thead><tr><th>Subcat.</th><th>UAS permitidos</th><th>Personas</th><th>Distancia</th></tr></thead><tbody>
+<tr><td>A1</td><td>C0, &lt;250 g sin clase</td><td>✅ Aisladas (no concentraciones)</td><td>Sin límite fijo</td></tr>
+<tr><td>A1</td><td>C1</td><td>❌ Ninguna persona</td><td>—</td></tr>
+<tr><td>A2</td><td>C2</td><td>⚠️ Con distancia mínima</td><td>30 m (o 5 m en modo lento)</td></tr>
+<tr><td>A3</td><td>C2/C3/C4/privado &lt;25 kg</td><td>❌ Zonas sin personas</td><td>150 m de zonas habitadas</td></tr>
+</tbody></table>
+</div>`
+    }
+  ],
+  quiz:[
+    {q:'¿Cuántas condiciones GENERALES de vuelo aplican a TODAS las subcategorías de la categoría abierta?',ctx:'Son las reglas base del Reglamento 2019/947 que todo piloto en categoría abierta debe conocer.',opts:['3','4','5','6'],correct:3,explain:'Son 6 condiciones generales: VLOS, límite 120 m (con excepción), encuentro con aeronaves tripuladas, prohibición de concentraciones y distancia a personas, uso del observador, y prohibición de mercancías peligrosas.'},
+    {q:'¿En qué caso concreto se permite usar FPV (gafas de visión en primera persona) en categoría abierta?',ctx:'El VLOS es la norma, pero el reglamento establece dos excepciones concretas.',opts:['Siempre que el piloto vea la pantalla del mando','Nunca, está prohibido el FPV en categoría abierta','Cuando hay un observador de aeronave junto al piloto que mantiene el contacto visual directo','Solo en subcategoría A3 alejado de personas'],correct:2,explain:'El FPV se permite en categoría abierta ÚNICAMENTE cuando hay un observador de la aeronave situado junto al piloto que mantiene el contacto visual directo con el dron (sin instrumentos). El piloto sigue siendo el último responsable.'},
+    {q:'Con tu DJI Neo (C0) en A1, sobrevuelas a 3 personas haciendo picnic en un parque que no participan en tu vuelo. ¿Es legal?',ctx:'Distingue entre personas no participantes aisladas y concentraciones de personas.',opts:['No, nunca puedes sobrevolar a nadie en A1','Sí, el C0 en A1 puede sobrevolar personas no participantes respetando su privacidad y datos','Solo si les pides permiso explícito','Solo si estás a más de 30 m de ellas'],correct:1,explain:'Con C0 en A1 SÍ puedes sobrevolar personas no participantes aisladas (no es una concentración donde no puedan apartarse), respetando su privacidad y protección de datos. Lo que NUNCA está permitido es sobrevolar concentraciones de personas.'},
+    {q:'Vuelas un C2 en A2 con modo baja velocidad activado (<3 m/s). ¿Cuál es la distancia mínima a personas no participantes?',ctx:'La regla 1:1 aplica cuando se activa el modo de baja velocidad en A2.',opts:['30 metros','15 metros','5 metros','No puedes acercarte en A2'],correct:2,explain:'Con modo de baja velocidad (<3 m/s) activado en A2, la distancia mínima puede reducirse hasta 5 m. La regla 1:1 establece que la altura se reduce en la misma proporción que la distancia horizontal a personas no participantes.'},
+    {q:'En subcategoría A3, ¿a qué distancia mínima de zonas residenciales debes mantenerte?',ctx:'A3 es la subcategoría más restrictiva respecto a la proximidad de zonas habitadas.',opts:['50 m','120 m','150 m','200 m'],correct:2,explain:'En A3 debes mantenerte a una distancia horizontal mínima de 150 m de zonas residenciales, comerciales, industriales y recreativas. Además, solo debes volar en zonas donde no se espera poner en peligro a ninguna persona no participante.'}
+  ]
+},
+{
+  id:5, icon:'🗺️', name:'Zonas de Vuelo, ENAIRE y Seguridad',
+  desc:'Consulta el espacio aéreo, geoconsciencia, NOTAM, seguro RC y protección de datos',
+  xp:140,
+  lessons:[{
+    title:'Planificación del vuelo y herramientas de seguridad',
+    html:`<div class="lesson-card">
+<h2>🗺️ Zonas de Vuelo, ENAIRE y Seguridad Práctica</h2>
+
+<h3>🌐 Sistema de Geoconsciencia — Definición oficial</h3>
+<p>La <span class="hl">geoconsciencia</span> es una función del dron que, basándose en los datos facilitados por los estados miembros, detecta una posible violación de las limitaciones del espacio aéreo y <span class="hl">alerta al piloto</span> para que tome medidas inmediatas y eficaces para evitarla. Los drones C1 y superiores la llevan integrada obligatoriamente.</p>
+
+<h3>📍 Zona Geográfica de UAS — Definición oficial</h3>
+<p>Parte del espacio aéreo establecida por la autoridad competente (AESA en España) que <span class="hl">facilita, restringe o excluye</span> operaciones de UAS con el fin de gestionar riesgos de seguridad, protección, privacidad, protección de datos o medio ambiente.</p>
+<div class="info-box warning"><strong>⚠️ Las zonas geográficas pueden reducir el límite de 120 m</strong>
+AESA puede definir zonas donde la altura máxima sea inferior a 120 m. Siempre respeta los límites de la zona geográfica en la que vayas a volar.</div>
+
+<h3>📱 ENAIRE Drones — Consulta OBLIGATORIA antes de cada vuelo</h3>
+<ul class="rule-list">
+<li>App oficial disponible en iOS, Android y web: <span class="hl">drones.enaire.es</span></li>
+<li>Muestra las zonas geográficas UAS activas en tiempo real.</li>
+<li>Incluye NOTAM (avisos temporales del espacio aéreo).</li>
+</ul>
+<table class="tbl"><thead><tr><th>Color</th><th>Significado</th><th>¿Puedes volar?</th></tr></thead><tbody>
+<tr><td>🟢 Verde</td><td>Zona libre</td><td>✅ Sí, con tus restricciones habituales</td></tr>
+<tr><td>🟡 Amarillo</td><td>Zona condicional</td><td>⚠️ Solo bajo condiciones específicas</td></tr>
+<tr><td>🔴 Rojo</td><td>Zona restringida o prohibida</td><td>❌ No sin autorización especial de AESA</td></tr>
+<tr><td>🔵 Azul</td><td>Espacio aéreo controlado</td><td>❌ Requiere autorización del control de tráfico aéreo</td></tr>
+</tbody></table>
+
+<h3>📢 NOTAM — Avisos temporales del espacio aéreo</h3>
+<p>Un NOTAM puede crear restricciones temporales por: eventos deportivos, ejercicios militares, operaciones de emergencia, visitas de autoridades, obras en aeropuertos, etc.</p>
+<div class="info-box danger"><strong>🔥 CRÍTICO: Incendios forestales</strong>
+NUNCA vueles cerca de incendios activos aunque ENAIRE no muestre restricción todavía. Las restricciones tardan en actualizarse. Los drones interfieren gravemente con hidroaviones y helicópteros de extinción poniendo vidas en riesgo. La sanción es muy grave.</div>
+
+<h3>🛡️ Seguro de Responsabilidad Civil (RC)</h3>
+<table class="tbl"><thead><tr><th>Clase / Situación</th><th>Seguro RC</th></tr></thead><tbody>
+<tr><td>C0 y C1 en categoría abierta</td><td>❌ No obligatorio (pero muy recomendable)</td></tr>
+<tr><td>C2 en subcategoría A2</td><td>✅ Obligatorio</td></tr>
+<tr><td>Más de 20 kg (cualquier clase)</td><td>✅ Obligatorio</td></tr>
+<tr><td>Categoría específica o certificada</td><td>✅ Obligatorio</td></tr>
+</tbody></table>
+<div class="info-box success"><strong>💡 Para el DJI Neo (C0): no obligatorio pero muy recomendable</strong>
+El seguro cubre al OPERADOR frente a daños causados a terceros (personas, propiedades). No cubre el propio dron. Desde ~30-50€/año cubre todas tus operaciones con cualquier C0 que operes.</div>
+
+<h3>✅ Checklist Pre-Vuelo (7 puntos)</h3>
+<ul class="rule-list">
+<li>☑️ Consultar ENAIRE Drones — zonas geográficas UAS y NOTAM activos.</li>
+<li>☑️ Revisar batería del dron y del mando al 100%.</li>
+<li>☑️ Verificar previsión meteorológica (viento, lluvia, visibilidad).</li>
+<li>☑️ Confirmar número de operador visible en el dron.</li>
+<li>☑️ Portar el certificado de formación o prueba de competencia.</li>
+<li>☑️ Identificar punto de aterrizaje de emergencia.</li>
+<li>☑️ Actualizar el sistema de geoconsciencia del dron si procede.</li>
+</ul>
+
+<h3>📸 Protección de Datos al Grabar con el DJI Neo</h3>
+<ul class="rule-list">
+<li>Las imágenes de personas identificables son <span class="hl">datos personales</span> — aplica LOPD/RGPD.</li>
+<li>No grabes personas sin su consentimiento ni propiedades privadas de forma deliberada.</li>
+<li>Evita grabar cerca de colegios, hospitales, juzgados o instalaciones sensibles.</li>
+<li>Los requisitos son más estrictos si usas las imágenes con fines <span class="hl-o">comerciales o profesionales</span>.</li>
+</ul>
+</div>`
+  }],
+  quiz:[
+    {q:'¿Qué es la "geoconsciencia" según el Reglamento UE?',ctx:'Es una función técnica que los reglamentos exigen a los drones C1 y superiores.',opts:['Un mapa de carreteras para drones','Una función que detecta violaciones del espacio aéreo y alerta al piloto','El sistema GPS del dron','Un registro de vuelos en la nube de AESA'],correct:1,explain:'La geoconsciencia es una función que, basándose en datos de los estados miembros, detecta posibles violaciones del espacio aéreo y alerta al piloto para que tome medidas inmediatas y eficaces para evitarlas.'},
+    {q:'¿Qué herramienta oficial debes consultar ANTES de cada vuelo en España?',ctx:'Es la herramienta del proveedor de servicios de navegación aérea de España.',opts:['DJI Fly','Google Maps','ENAIRE Drones (drones.enaire.es)','AirMap'],correct:2,explain:'ENAIRE Drones (drones.enaire.es y app) es la herramienta oficial para consultar el espacio aéreo en España. Muestra zonas geográficas UAS activas, NOTAM y restricciones temporales en tiempo real.'},
+    {q:'Ves humo a 3 km. ENAIRE no muestra ninguna restricción todavía. ¿Puedes volar?',ctx:'Los incendios forestales son una situación de seguridad crítica especial.',opts:['Sí, si ENAIRE no lo restringe es legal','Sí, si estoy a más de 1 km del humo','No, nunca debo volar cerca de posibles incendios activos aunque ENAIRE no lo indique aún','Solo si vuelo por debajo de 30 m'],correct:2,explain:'NUNCA debes volar cerca de incendios activos aunque ENAIRE no muestre restricción todavía. Las actualizaciones tardan. Los drones interfieren gravemente con los medios aéreos de extinción, poniendo vidas humanas en riesgo directo.'},
+    {q:'¿Para qué clase de drones es LEGALMENTE obligatorio el seguro de RC en categoría abierta?',ctx:'El seguro depende de la clase del dron y la subcategoría de operación.',opts:['Para todos sin excepción','Para C0 y C1','Para C2 en A2 y para todos los drones de más de 20 kg','Solo para uso comercial'],correct:2,explain:'El seguro de RC es obligatorio para C2 en subcategoría A2 y para todos los drones de más de 20 kg. También es obligatorio en categorías específica y certificada. Para C0/C1 en categoría abierta no es legalmente obligatorio.'},
+    {q:'¿Qué cubre exactamente el seguro de responsabilidad civil de drones?',ctx:'Hay una diferencia importante entre lo que cubre y lo que no.',opts:['El aparato (el dron) en caso de pérdida o rotura','Al operador frente a daños causados a terceros (personas y propiedades)','Tanto el dron como los daños a terceros','Solo los daños si el vuelo era comercial'],correct:1,explain:'El seguro de RC cubre al OPERADOR frente a daños que cause a terceros: personas o propiedades. No cubre el propio dron ni sus reparaciones. Un solo seguro puede cubrir todas tus operaciones con los drones que operes.'}
+  ]
+},
+{
+  id:6, icon:'🎓', name:'Examen Final — Certificado de Piloto',
+  desc:'10 preguntas de todo el curso. Necesitas el 70% para aprobar y completar el curso',
+  xp:250,
+  isExam:true,
+  lessons:[],
+  quiz:[
+    {q:'¿Cuál es el término oficial que usan los reglamentos europeos 2019/945 y 2019/947?',ctx:'Solo uno de estos términos es el oficial en la normativa UE.',opts:['Dron','RPAS','UAS','Aeromodelo'],correct:2,explain:'UAS (Sistema de Aeronave No Tripulada) es el único término oficial en los reglamentos europeos. Dron, RPAS y aeromodelo quedan englobados dentro del concepto de UAS.'},
+    {q:'¿Cuál es la edad mínima para ser OPERADOR registrado en AESA?',ctx:'Distingue entre el rol de piloto y el de operador registrado.',opts:['12 años','14 años','16 años','18 años'],correct:2,explain:'La edad mínima para ser OPERADOR registrado en AESA es 16 años, siempre. Para ser PILOTO con C0 en A1 basta con 12 años, pero siempre bajo la responsabilidad de un operador adulto registrado.'},
+    {q:'¿Qué reglamento europeo establece los requisitos técnicos para las clases de drones C0-C4?',ctx:'Hay dos reglamentos clave: uno para operaciones y otro para diseño/fabricación.',opts:['Reglamento UE 2019/947','Reglamento UE 2019/945','Real Decreto 517/2024','Reglamento UE 2020/639'],correct:1,explain:'El Reglamento Delegado (UE) 2019/945 establece los requisitos de diseño, fabricación y comercialización para los UAS C0-C4. El Reglamento 2019/947 regula las operaciones y condiciones de vuelo.'},
+    {q:'¿Cuántas condiciones generales de vuelo aplican a TODAS las subcategorías de la categoría abierta?',ctx:'Son las reglas base que todo piloto en categoría abierta debe cumplir siempre.',opts:['3','4','5','6'],correct:3,explain:'Son 6 condiciones generales: VLOS, límite 120 m (con excepción), protocolo ante aeronaves tripuladas, distancia/prohibición de concentraciones, uso del observador, y prohibición de mercancías peligrosas y proyectiles.'},
+    {q:'¿Cuál es la única excepción que permite superar los 120 m en categoría abierta?',ctx:'El reglamento establece una excepción muy específica con condiciones concretas.',opts:['No hay ninguna excepción','Si el piloto tiene licencia de piloto privado','Sobrevolar obstáculos de más de 105 m que estén a menos de 50 m del piloto (hasta 15 m por encima)','Si el fabricante lo autoriza expresamente'],correct:2,explain:'La excepción permite volar hasta 15 m por encima de un obstáculo cuando este tiene más de 105 m de altura y se encuentra a menos de 50 m del piloto. Fuera de este caso, el límite de 120 m es absoluto.'},
+    {q:'Con un DJI Neo (C0) en A1, ¿puedes sobrevolar a 4 personas haciendo senderismo en un monte?',ctx:'Piensa en la definición de concentración de personas y en qué permite la subcategoría A1 con C0.',opts:['No, nunca puedes sobrevolar personas en A1','Sí, C0 en A1 puede sobrevolar personas no participantes aisladas, respetando su privacidad','Solo si dan consentimiento explícito','Solo por debajo de 30 m de altura'],correct:1,explain:'Con C0 en A1 SÍ puedes sobrevolar personas no participantes aisladas (4 senderistas no constituyen una concentración donde no puedan apartarse). Debes respetar su privacidad y datos. Lo que nunca puedes es sobrevolar concentraciones.'},
+    {q:'El número de operador de AESA debe estar en el dron. ¿Qué restricción adicional tiene?',ctx:'Hay un aspecto de privacidad que la normativa exige y mucha gente ignora.',opts:['Publicarlo en todos los vídeos para ser transparente','Colocarlo en el dron pero NO publicarlo online — es un dato privado','Es opcional ponerlo si el dron pesa menos de 250 g','Solo hay que comunicárselo a AESA, no ponerlo en el dron'],correct:1,explain:'El número debe estar físicamente en el dron para que las autoridades puedan identificar al operador. Pero debe mantenerse en PRIVADO: no lo publiques online, en redes ni en vídeos. Para C0 basta una etiqueta adhesiva.'},
+    {q:'¿Qué debes hacer si durante tu vuelo aparece inesperadamente un helicóptero en tu zona?',ctx:'El reglamento establece un protocolo claro de actuación ante aeronaves tripuladas.',opts:['Mantener el dron estático y dejar que el helicóptero maniobre','Ascender para tener mejor visibilidad y evitar obstáculos bajos','Reducir altura inmediatamente, maniobrar si es necesario y aterrizar lo antes posible','Solo aterrizar si el helicóptero está a menos de 100 m'],correct:2,explain:'Ante encuentro con aeronave tripulada: reduce altura inmediatamente, realiza maniobra evasiva si hay riesgo de colisión y aterriza lo antes posible. El piloto del dron cede el paso siempre a la aviación tripulada. Interrumpe si hay riesgo.'},
+    {q:'¿Para qué clase de dron es obligatorio el seguro de RC al operar en categoría abierta?',ctx:'El seguro es obligatorio solo para ciertas clases y situaciones.',opts:['Para todos los drones con cámara','Para C0 y C1 en A1','Para C2 en A2 y todos los drones de más de 20 kg','Para cualquier vuelo comercial'],correct:2,explain:'El seguro de RC es obligatorio para C2 en subcategoría A2 y para todos los drones de más de 20 kg. También en categorías específica y certificada. Para C0/C1 en categoría abierta no es obligatorio pero sí muy recomendable.'},
+    {q:'¿Cuál de estas afirmaciones sobre el VLOS en categoría abierta es CORRECTA?',ctx:'El VLOS tiene una definición precisa y dos excepciones reglamentarias.',opts:['Puedes usar binoculares para ampliar el alcance visual','El FPV siempre está prohibido en todas las subcategorías','Puedes usar FPV si hay un observador que mantiene contacto visual directo con el dron','BVLOS está permitido en A1 si el dron tiene seguimiento automático'],correct:2,explain:'El FPV está permitido en categoría abierta SOLO cuando hay un observador de la aeronave junto al piloto que mantiene contacto visual directo con el dron. El observador no amplía el rango de vuelo. BVLOS no está permitido en categoría abierta.'}
+  ]
+}
+];
+
+// ════════════════════════════════════════
+//  ESTADO Y LOGROS
+// ════════════════════════════════════════
+let S = { xp:0, lives:3, streak:0, completed:[], curMod:null, curLesson:0, quiz:{qs:[],cur:0,wrong:[],answered:false,isExam:false}, achs:[] };
+
+const ACHS = [
+  {id:'first',icon:'📚',name:'Primera Lección',fn:()=>S.completed.length>=1},
+  {id:'perfect',icon:'💯',name:'Sin Fallos',fn:()=>S.quiz.wrong&&S.quiz.wrong.length===0&&S.quiz.qs.length>0},
+  {id:'mid',icon:'🚀',name:'A Mitad',fn:()=>S.completed.length>=3},
+  {id:'grad',icon:'🎓',name:'Graduado',fn:()=>S.completed.length>=6},
+  {id:'x100',icon:'⚡',name:'100 XP',fn:()=>S.xp>=100},
+  {id:'x500',icon:'🌟',name:'500 XP',fn:()=>S.xp>=500},
+];
+
+function updHdr(){document.getElementById('hxp').textContent=S.xp;document.getElementById('hlives').textContent=S.lives;document.getElementById('hstreak').textContent=S.streak;}
+function updProg(){const p=Math.round((S.completed.length/MODS.length)*100);document.getElementById('pfill').style.width=p+'%';document.getElementById('ppct').textContent=p+'%';document.getElementById('plabel').textContent=p===0?'Empieza con el Módulo 1 👇':p===100?'🎉 ¡Curso completado! Ya conoces la normativa.':S.completed.length+' de '+MODS.length+' módulos completados';}
+function showScreen(id){document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));document.getElementById('screen-'+id).classList.add('active');}
+function goHome(){showScreen('home');renderMods();renderAchs();updProg();updHdr();}
+function toast(msg){const t=document.getElementById('toast');t.textContent=msg;t.style.display='block';setTimeout(()=>t.style.display='none',3500);}
+
+function checkAchs(){
+  let found=[];
+  ACHS.forEach(a=>{if(!S.achs.includes(a.id)&&a.fn()){S.achs.push(a.id);found.push(a);}});
+  if(found.length){toast('🏆 Logro: '+found[0].icon+' '+found[0].name);renderAchs();}
+}
+
+function renderMods(){
+  const c=document.getElementById('mods-list');c.innerHTML='';
+  MODS.forEach((m,i)=>{
+    const done=S.completed.includes(m.id);
+    const locked=i>0&&!S.completed.includes(MODS[i-1].id);
+    const d=document.createElement('div');
+    d.className='module-card'+(done?' completed':'')+(locked?' locked':'');
+    d.innerHTML=`<div class="mod-icon">${m.icon}</div><div class="mod-info"><div class="mod-name">${m.name}</div><div class="mod-desc">${m.desc}</div></div><div class="mod-right"><span class="mod-status ${done?'done':locked?'lock':'open'}">${done?'✓ COMPLETADO':locked?'🔒 BLOQUEADO':'INICIAR →'}</span><span class="mod-xp">+${m.xp} XP</span></div>`;
+    if(!locked)d.onclick=()=>startMod(m);
+    c.appendChild(d);
+  });
+}
+
+function renderAchs(){
+  const c=document.getElementById('ach-row');c.innerHTML='';
+  ACHS.forEach(a=>{
+    const u=S.achs.includes(a.id);
+    const d=document.createElement('div');
+    d.className='ach'+(u?' unlocked':'');
+    d.innerHTML=`<span class="ach-icon" style="opacity:${u?1:0.3}">${a.icon}</span><div class="ach-name">${a.name}</div>`;
+    c.appendChild(d);
+  });
+}
+
+function startMod(m){
+  S.curMod=m;S.curLesson=0;
+  if(m.isExam){startQuiz(m,true);return;}
+  document.getElementById('ltitle').textContent=m.icon+' '+m.name;
+  renderLesson(m,0);showScreen('lesson');
+}
+
+function renderLesson(m,idx){
+  S.curLesson=idx;
+  const nav=document.getElementById('steps-nav');nav.innerHTML='';
+  m.lessons.forEach((_,i)=>{
+    const d=document.createElement('div');
+    d.className='step-dot'+(i<idx?' done':i===idx?' active':'');
+    d.textContent=i+1;
+    d.onclick=()=>{if(i<=idx)renderLesson(m,i);};
+    nav.appendChild(d);
+  });
+  const qd=document.createElement('div');qd.className='step-dot';qd.style.background='rgba(255,107,53,0.2)';qd.style.borderColor='var(--accent2)';qd.style.color='var(--accent2)';qd.textContent='?';nav.appendChild(qd);
+  const isLast=idx===m.lessons.length-1;
+  document.getElementById('lesson-content').innerHTML=m.lessons[idx].html+`<div class="nav-btns">${idx>0?'<button class="btn btn-secondary" onclick="renderLesson(S.curMod,'+(idx-1)+')">← ANTERIOR</button>':''}${isLast?'<button class="btn btn-quiz" onclick="startQuiz(S.curMod,false)">🎯 HACER EL QUIZ →</button>':'<button class="btn btn-primary" onclick="renderLesson(S.curMod,'+(idx+1)+')">SIGUIENTE →</button>'}</div>`;
+}
+
+// ════════════════════════════════════════
+//  QUIZ
+// ════════════════════════════════════════
+function startQuiz(m,isExam){
+  S.curMod=m;
+  S.quiz={qs:[...m.quiz].sort(()=>Math.random()-0.5),cur:0,wrong:[],answered:false,isExam};
+  S.lives=3;updHdr();
+  document.getElementById('qtitle').textContent=isExam?'🎓 EXAMEN FINAL':m.icon+' Quiz — '+m.name;
+  renderQ();showScreen('quiz');
+}
+
+function renderQ(){
+  const{qs,cur}=S.quiz;const q=qs[cur];
+  document.getElementById('qcounter').textContent=(cur+1)+'/'+qs.length;
+  document.getElementById('qpfill').style.width=(cur/qs.length*100)+'%';
+  document.getElementById('qlives').textContent=S.lives;
+  document.getElementById('qq').textContent=q.q;
+  document.getElementById('qctx').textContent=q.ctx||'';
+  const opts=document.getElementById('qopts');opts.innerHTML='';
+  ['A','B','C','D'].forEach((l,i)=>{
+    const b=document.createElement('button');b.className='quiz-opt';
+    b.innerHTML=`<span class="opt-letter">${l}</span>${q.opts[i]}`;
+    b.onclick=()=>selectA(i);opts.appendChild(b);
+  });
+  document.getElementById('qfb').className='feedback-box';
+  document.getElementById('qfb').innerHTML='';
+  document.getElementById('qnext').style.display='none';
+  S.quiz.answered=false;
+}
+
+function selectA(idx){
+  if(S.quiz.answered)return;
+  S.quiz.answered=true;
+  const q=S.quiz.qs[S.quiz.cur];
+  const opts=document.querySelectorAll('.quiz-opt');
+  const fb=document.getElementById('qfb');
+  opts.forEach(o=>o.disabled=true);
+  opts[q.correct].classList.add('correct');
+  if(idx===q.correct){
+    fb.className='feedback-box correct-fb show';
+    fb.innerHTML=`<strong>✅ ¡Correcto!</strong>${q.explain}`;
+    S.streak++;
+  } else {
+    opts[idx].classList.add('wrong');
+    fb.className='feedback-box wrong-fb show';
+    fb.innerHTML=`<strong>❌ Incorrecto</strong>${q.explain}`;
+    S.lives=Math.max(0,S.lives-1);S.streak=0;
+    S.quiz.wrong.push({q:q.q,your:q.opts[idx],correct:q.opts[q.correct]});
+    updHdr();
+  }
+  document.getElementById('qnext').style.display='block';
+}
+
+function nextQ(){
+  S.quiz.cur++;
+  if(S.quiz.cur>=S.quiz.qs.length)showResults();
+  else renderQ();
+}
+
+function showResults(){
+  const{qs,wrong,isExam}=S.quiz;
+  const correct=qs.length-wrong.length;
+  const pct=Math.round(correct/qs.length*100);
+  const pass=pct>=70;
+  const xpE=pass?S.curMod.xp:Math.round(S.curMod.xp*0.3);
+  S.xp+=xpE;
+  if(pass&&!S.completed.includes(S.curMod.id))S.completed.push(S.curMod.id);
+  checkAchs();updHdr();fbAutoSave();
+  document.getElementById('scircle').className='score-circle '+(pass?'pass':'fail');
+  document.getElementById('snum').textContent=pct+'%';
+  document.getElementById('rtitle').textContent=pass?(pct===100?'🏆 ¡Perfecto! Máxima puntuación':'🎉 ¡Aprobado!'):'😅 A repasar un poco más...';
+  document.getElementById('rsub').textContent=pass?correct+' de '+qs.length+' correctas. '+(isExam?'¡Conoces la normativa!':'¡Módulo completado!'):correct+' de '+qs.length+' correctas. Necesitas al menos el 70%.';
+  document.getElementById('rxp').textContent='⚡ +'+xpE+' XP';
+  if(wrong.length>0){
+    document.getElementById('wsect').style.display='block';
+    document.getElementById('wlist').innerHTML=wrong.map(w=>`<div class="wrong-item"><div class="wq">❓ ${w.q}</div><div class="wa">✗ Tu respuesta: ${w.your}</div><div class="wc">✓ Correcto: ${w.correct}</div></div>`).join('');
+  } else {
+    document.getElementById('wsect').style.display='none';
+  }
+  showScreen('results');
+}
+
+function retryQuiz(){S.lives=3;startQuiz(S.curMod,S.quiz.isExam);}
+
+
+// ════════════════════════════════════════
+//  LOGIN & FIREBASE
+// ════════════════════════════════════════
+let CURRENT_USER = null;
+let SAVE_TIMER = null;
+
+function doLogin(){
+  const raw = document.getElementById('login-name').value.trim();
+  const errEl = document.getElementById('login-err');
+  const retEl = document.getElementById('login-returning');
+  const btn   = document.getElementById('login-btn');
+  if(raw.length < 2){ errEl.textContent = '⚠️ El nombre debe tener al menos 2 caracteres.'; return; }
+  if(raw.length > 24){ errEl.textContent = '⚠️ Máximo 24 caracteres.'; return; }
+  const user = raw.replace(/[^a-zA-Z0-9_áéíóúÁÉÍÓÚñÑ ]/g,'').trim();
+  if(!user){ errEl.textContent = '⚠️ Nombre no válido.'; return; }
+  errEl.textContent = '';
+  btn.disabled = true;
+  btn.textContent = '⏳ Cargando...';
+  const fbLoad = window._fbLoad;
+  if(typeof fbLoad === 'function'){
+    fbLoad(user).then(saved => {
+      if(saved){
+        retEl.style.display = 'block';
+        S.xp        = saved.xp        || 0;
+        S.lives     = saved.lives     || 3;
+        S.streak    = saved.streak    || 0;
+        S.completed = saved.completed || [];
+        S.achs      = saved.achs      || [];
+      }
+      enterApp(user);
+    }).catch(()=>{ enterApp(user); });
+  } else {
+    setTimeout(()=>enterApp(user), 300);
+  }
+}
+
+function enterApp(user){
+  CURRENT_USER = user;
+  document.getElementById('huser').textContent = user;
+  document.getElementById('screen-login').style.display = 'none';
+  document.getElementById('app-wrap').style.display = 'block';
+  renderMods(); renderAchs(); updHdr(); updProg();
+}
+
+function logOut(){
+  if(!confirm('¿Cerrar sesión? Tu progreso está guardado.')) return;
+  CURRENT_USER = null;
+  S = { xp:0, lives:3, streak:0, completed:[], curMod:null, curLesson:0, quiz:{qs:[],cur:0,wrong:[],answered:false,isExam:false}, achs:[] };
+  document.getElementById('login-name').value = '';
+  document.getElementById('login-err').textContent = '';
+  document.getElementById('login-returning').style.display = 'none';
+  document.getElementById('login-btn').disabled = false;
+  document.getElementById('login-btn').textContent = '🚀 ENTRAR AL CURSO';
+  document.getElementById('screen-login').style.display = 'flex';
+  document.getElementById('app-wrap').style.display = 'none';
+}
+
+function fbAutoSave(){
+  if(!CURRENT_USER || typeof window._fbSave !== 'function') return;
+  clearTimeout(SAVE_TIMER);
+  SAVE_TIMER = setTimeout(()=>{ window._fbSave(CURRENT_USER, S); }, 1200);
+}
+
+// INIT — arranca en pantalla login
+// (app se inicializa al hacer login)
+</script>
+</body>
+</html>
